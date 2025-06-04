@@ -1,0 +1,15 @@
+# Byte-compiled
+__pycache__
+src/sav.egg-info
+
+# PyCharm
+.idea
+
+# packaging
+dist
+
+# data
+data/outputs
+data/MNIST
+data/checkpoints
+
