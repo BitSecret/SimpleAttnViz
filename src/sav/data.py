@@ -13,7 +13,7 @@ def split_image(image):
     :param image: <class 'torch.Tensor'>, torch.Size([28, 28])
     :return: <class 'torch.Tensor'>, torch.Size([49, 16])
     """
-    C, H, W = image.shape
+    C, H, W = image.shape    # Channels, Height, Width
     h_block, w_block = config["data"]["patch_size"]
 
     # 检查是否能整除
@@ -25,7 +25,7 @@ def split_image(image):
     n_w = W // w_block
 
     # 分块并展平（关键步骤）
-    # Shape: (N_patches, C * h_block * w_block)
+    # Shape: (N_patches, C * h_block * w_block), N_patches=n_h*n_w
     patches = image.reshape(C, n_h, h_block, n_w, w_block).transpose(1, 2).reshape(C * h_block * w_block, n_h * n_w).T
 
     return patches
@@ -62,36 +62,39 @@ class MyDataset(Dataset):
     def show_data(self):
         print(f"data_type: '{self.data_type}'")
         print(f"len(data): '{len(self.data)}'")
+        print(f"type(raw_image): {type(self.raw_data[0][0])}")  # <class 'torch.Tensor'>,
+        print(f"raw_image.shape: {self.raw_data[0][0].shape}")  # torch.Size([64, 48]), value in [0, 1]
         print(f"type(image): {type(self.data[0][0])}")  # <class 'torch.Tensor'>,
-        print(f"image.shape: {self.data[0][0].shape}")  # torch.Size([49, 16]), value in [0, 1]
+        print(f"image.shape: {self.data[0][0].shape}")  # torch.Size([64, 48]), value in [0, 1]
         print(f"type(label): {type(self.data[0][1])}")
         print(f"label: {self.data[0][1]}")
 
 
 def get_datasets():
-    transform = transforms.Compose([transforms.ToTensor()])  # To 0~1
+    transform = transforms.Compose([transforms.ToTensor()])   # 转化为Tensor
 
-    train_data = datasets.MNIST(  # 60000
-        root='../../data',
+    # 加载训练集和测试集
+    train_data = datasets.CIFAR10(    # 5w
+        root='../../data/CIFAR-10',
         train=True,
-        download=True,  # 如果本地不存在则自动下载
+        download=True,
         transform=transform
     )
 
-    test_data = datasets.MNIST(  # 10000
-        root='../../data',
+    test_data = datasets.CIFAR10(    # 1w
+        root='../../data/CIFAR-10',
         train=False,
         download=True,
         transform=transform
     )
 
-    val_size = int(0.5 * len(test_data))  # 50% 作为验证集，剩余作为测试集
-    test_size = len(test_data) - val_size
+    # val_size = int(0.5 * len(test_data))  # 50% 作为验证集，剩余作为测试集
+    # test_size = len(test_data) - val_size
+    #
+    # val_data, test_data = random_split(test_data, [val_size, test_size])  # 随机拆分
 
-    val_data, test_data = random_split(test_data, [val_size, test_size])  # 随机拆分
-
-    train_dataset = MyDataset("train", train_data)  # 60000
-    val_dataset = MyDataset("val", val_data)  # 5000
+    train_dataset = MyDataset("train", train_data)  # 50000
+    val_dataset = MyDataset("val", test_data)  # 5000
     test_dataset = MyDataset("test", test_data)  # 5000
 
     return train_dataset, val_dataset, test_dataset

@@ -1,12 +1,12 @@
 {
   "data": {
     "random_seed": 42,
-    "channels": 1,
+    "channels": 3,
     "patch_size": [4, 4],
     "n_classes": 10
   },
   "model": {
-    "d_model": 128,
+    "d_model": 256,
     "h": 8,
     "dropout": 0.1,
     "N": 6

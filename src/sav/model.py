@@ -121,7 +121,7 @@ class MNISTModel(nn.Module):
         x = torch.cat([cls_tokens, x], dim=1)  # (batch_size, seq_len+1, patch_size)
         x = self.pe(self.linear_map(x))  # (batch_size, seq_len+1, d_model)
 
-        attention_scores = []
+        attention_scores = []  # [N, batch_size, h, seq_len, seq_len]
         for i in range(self.N):
             x, scores = self.attentions[i](x)
             attention_scores.append(scores)

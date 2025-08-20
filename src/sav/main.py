@@ -113,7 +113,7 @@ def test(device, model, dataset):
     return correct_count / len(data_loader)
 
 
-def visualize(device, shape=(4, 4)):
+def visualize(device, shape):
     set_seed()
 
     _, _, test_dataset = get_datasets()
@@ -125,61 +125,65 @@ def visualize(device, shape=(4, 4)):
     bst_model_path = f"../../data/checkpoints/bst.pth"
     model.load_state_dict(torch.load(bst_model_path, map_location=torch.device(device), weights_only=True))
 
-    _, attention_scores = model(image_patches)
+    _, attention_scores = model(image_patches)  # attention_scores: [N, batch_size, h, seq_len, seq_len]
     for i in range(len(attention_scores)):
+        # attention_scores[i]: [batch_size, h, seq_len, seq_len]
         attention_scores[i] = torch.sum(attention_scores[i], dim=1)
+        # attention_scores[i]: [batch_size, seq_len, seq_len]
 
     eye_matrix = torch.eye(attention_scores[0].size(2)).to(device)
     attention_matrix = [torch.eye(attention_scores[0].size(2)).to(device) for _ in range(shape[0] * shape[1])]
 
-    for i in range(len(attention_scores)):  # 注意力矩阵前向传播
+    for i in range(len(attention_scores))[::-1]:  # 注意力矩阵前向传播
         for batch_idx in range(shape[0] * shape[1]):
             attention_matrix[batch_idx] = torch.mm(
-                torch.add(eye_matrix, attention_scores[i][batch_idx]),
-                attention_matrix[batch_idx]
+                attention_matrix[batch_idx],
+                torch.add(eye_matrix, attention_scores[i][batch_idx])
             )
 
-    H, W = raw_images[0].shape
+    C, H, W = raw_images[0].shape
     h_block, w_block = config["data"]["patch_size"]
 
     n_h = H // h_block
     n_w = W // w_block
 
-    for batch_idx in range(shape[0] * shape[1]):
+    for batch_idx in range(shape[0] * shape[1]):  # 注意力归一化
         attention_matrix[batch_idx] = attention_matrix[batch_idx][0][1:]  # 取 token [CLS] 的注意力，并去掉 [CLS]
         attention_matrix[batch_idx] = attention_matrix[batch_idx].reshape(n_h, n_w)  # 调整为block大小
         attention_matrix[batch_idx] = attention_matrix[batch_idx].unsqueeze(0).unsqueeze(0)  # 调整到4D
         attention_matrix[batch_idx] = F.interpolate(  # 插值
             attention_matrix[batch_idx],
-            size=raw_images[0].shape,
+            size=(H, W),
             mode='bicubic',  # 插值方式，也可以用trilinear
             align_corners=False  # 角像素对齐方式
         )
         attention_matrix[batch_idx] = attention_matrix[batch_idx].squeeze()  # 移除多余的维度
         min_val = attention_matrix[batch_idx].min()  # 缩放至 [0, 1]
         max_val = attention_matrix[batch_idx].max()
-        # attention_matrix[batch_idx] = 2 * (attention_matrix[batch_idx] - min_val) / (max_val - min_val + 1e-32) - 1
         attention_matrix[batch_idx] = (attention_matrix[batch_idx] - min_val) / (max_val - min_val + 1e-32)
 
-    plt.figure(figsize=(12, 12))
+    plt.figure(figsize=(shape[1] * 12, shape[0] * 12))
     for i in range(shape[0] * shape[1]):
-        plt.subplot(shape[0], shape[1], i + 1)  # 4行4列，第i+1个子图
+        plt.subplot(shape[0], shape[1], i + 1)
 
-        heatmap = attention_matrix[i].cpu().detach().numpy()  # 热力图 [28, 28], 值在0~1
-        image = 1 - raw_images[i].numpy()  # 灰度图像 [C=1, H, W], 值在0~1
+        image = raw_images[i].numpy().transpose(1, 2, 0)  # 三通道 [H, W, 3], 值0~1
 
-        cmap = plt.get_cmap('coolwarm')
-        heatmap_rgb = cmap(heatmap)[:, :, :3]
-        alpha = 0.5
-        overlay = (1 - alpha) * np.stack([image] * 3, axis=-1) + alpha * heatmap_rgb
-        plt.imshow(overlay)
+        heatmap = attention_matrix[i].cpu().detach().numpy()  # 单通道 [H, W], 值0~1
+        cmap = plt.get_cmap('coolwarm')  # 热力图颜色映射（coolwarm红-蓝渐变）
+        heatmap_rgb = cmap(heatmap)[:, :, :3]  # 转为RGB [H, W, 3]
+        # heatmap_rgb = heatmap_rgb * (heatmap[:, :, np.newaxis] ** 0.5)  # 增强高权重区域
 
-        plt.axis('off')  # 隐藏坐标轴
+        alpha = 0.4  # 基础透明度
+        overlay = image * (1 - alpha) + heatmap_rgb * alpha  # 叠加图像与热力图（保留原图色彩）
+
+        plt.imshow(np.clip(overlay, 0, 1))  # 确保值在 0-1 范围内
+        plt.axis('off')
 
     plt.tight_layout()  # 自动调整子图间距
+    plt.savefig("../../data/outputs/fig.pdf")
     plt.show()
 
 
 if __name__ == '__main__':
-    # main(device="cuda:0" if torch.cuda.is_available() else "cpu")
-    visualize(device="cuda:0" if torch.cuda.is_available() else "cpu", shape=(4, 4))
+    main(device="cuda:0" if torch.cuda.is_available() else "cpu")
+    visualize(device="cuda:0" if torch.cuda.is_available() else "cpu", shape=(4, 6))
