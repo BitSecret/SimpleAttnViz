@@ -1,7 +1,7 @@
 # A Simple Method for Attention Visualization
 
 The official implementation of the paper
-["A Simple Method for Attention Visualization"](https://arxiv.org/abs/2310.18021).
+["A Simple Method for Attention Visualization"](https://bitsecret.github.io/papers/zhang2025simple.pdf).
 
 This paper formally defines the concepts of intra-token information mixing and inter-token information mixing, while
 proposing a visualization analysis method based on attention matrix forward propagation. The proposed method achieves
@@ -59,12 +59,9 @@ To cite FormalGeo in publications use:
 > Zhang, X. (2025). A Simple Method for Attention Visualization.
 
 A BibTeX entry for LaTeX users is:
-> @misc{arxiv2025simple,  
+> @misc{zhang2025simple,  
 > title={A Simple Method for Attention Visualization},  
 > author={Xiaokai Zhang},  
-> year={2025},  
-> eprint={2310.18021},  
-> archivePrefix={arXiv},  
-> primaryClass={cs.AI},  
-> url={https://arxiv.org/abs/2310.18021}  
+> year={2025},
+> url={https://bitsecret.github.io/papers/zhang2025simple.pdf}
 > }
